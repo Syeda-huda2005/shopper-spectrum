@@ -1,6 +1,5 @@
 """
-🛒 Shopverse  
-“Where every choice meets innovation.”
+🛒Shopverse – “Your universe of smart shopping.”
 """
 
 import streamlit as st
@@ -15,7 +14,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(
-    page_title="| Shopverse -Your universe of smart shopping.",
+    page_title="Shopverse  | Your universe of smart shopping",
     page_icon="🛒", layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -24,6 +23,13 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 * { font-family: 'Inter', sans-serif !important; }
+/* Don't override Streamlit's icon font — doing so turns icon glyphs (e.g. the
+   expander arrow) into literal overlapping text like "arrow_drop_down". */
+[data-testid="stIconMaterial"], [data-testid="stExpanderIcon"],
+.material-icons, .material-symbols-rounded, .material-symbols-outlined,
+[class*="MaterialIcon"] {
+  font-family: 'Material Symbols Rounded' !important;
+}
 .stApp { background: #060b18 !important; }
 .main .block-container { padding: 1.5rem 2rem 3rem 2rem !important; max-width: 1400px !important; }
 
@@ -460,21 +466,44 @@ elif "Recommender" in page:
         # Search filter
         search_term=st.text_input("🔍 Search products",placeholder="Type to filter product list...",key="prod_search")
 
-        # Live "category" filter — first word of product name acts as a cheap tag
-        first_words=sorted(set(p.split()[0] for p in all_products if p.split()))
-        cat_filter=st.multiselect("🏷️ Filter by starting keyword (live)",first_words,default=[],key="cat_filter")
+        # Business-friendly category tags — the most common *meaningful* words
+        # across product names (not just the first word, which is often a
+        # stray number/size like "3" and isn't useful for filtering).
+        @st.cache_data
+        def build_category_tags(products):
+            import re
+            from collections import Counter
+            stopwords={"OF","THE","AND","WITH","SET","PACK","FOR","IN","TO","A","S",
+                       "DESIGN","STYLE","SMALL","LARGE","MEDIUM","ASSORTED","RETRO"}
+            counts=Counter()
+            for p in products:
+                for w in re.findall(r"[A-Z]{4,}",p.upper()):
+                    if w not in stopwords:
+                        counts[w]+=1
+            # keep tags that actually group multiple products, most useful first
+            return [w for w,c in counts.most_common(60) if c>=3]
+
+        popular_tags=build_category_tags(all_products)
+        cat_filter=st.multiselect(
+            "🏷️ Filter by product category",sorted(popular_tags),default=[],key="cat_filter",
+            help="Tags are the most common descriptive words found across product names — great for grouping similar merchandise (e.g. HEART, CHRISTMAS, GARDEN)."
+        )
 
         filtered_prods=all_products
         if search_term:
             filtered_prods=[p for p in filtered_prods if search_term.upper() in p.upper()]
         if cat_filter:
-            filtered_prods=[p for p in filtered_prods if p.split()[0] in cat_filter]
+            filtered_prods=[p for p in filtered_prods if any(tag in p.upper() for tag in cat_filter)]
 
         if filtered_prods:
-            selected=st.selectbox(f"Select product ({len(filtered_prods)} match)",filtered_prods,key="prod_select")
+            selected=st.selectbox(f"Select product ({len(filtered_prods)} match{'es' if len(filtered_prods)!=1 else ''})",filtered_prods,key="prod_select")
         else:
-            st.warning("No products match your search/filter.")
-            selected=all_products[0]
+            st.warning("No products match that search + tag combination. Try removing a tag, or clearing the search box.")
+            if st.button("↩️ Reset filters",key="reset_prod_filters"):
+                st.session_state["prod_search"]=""
+                st.session_state["cat_filter"]=[]
+                st.rerun()
+            selected=None
 
         c1,c2=st.columns(2)
         with c1: top_n=st.slider("# Recommendations",3,15,5,key="topn")
@@ -484,7 +513,7 @@ elif "Recommender" in page:
         show_network=st.toggle("Similarity heatmap",False,key="shownet")
         auto_update=st.toggle("⚡ Live update (no button needed)",True,key="auto_update")
 
-        run_now=auto_update or st.button("🚀  Generate Recommendations",key="genrec")
+        run_now=selected is not None and (auto_update or st.button("🚀  Generate Recommendations",key="genrec"))
 
         if run_now:
             similar=item_sim_df[selected].drop(selected)
