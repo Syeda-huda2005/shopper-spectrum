@@ -1,5 +1,6 @@
 """
-🛒 Shopper Spectrum — Streamlit Application
+🛒 Shopverse  
+Where every choice meets innovation — Streamlit Application
 Customer Segmentation + Product Recommendation Engine
 """
 
