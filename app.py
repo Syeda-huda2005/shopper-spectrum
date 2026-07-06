@@ -1,5 +1,5 @@
 """
-🛒 SHOPPER SPECTRUM — Ultimate Edition
+🛒 SHOPSPERE — Ultimate Edition
 Fully Interactive · Dark/Light Mode · Business Intelligence
 """
 
@@ -15,7 +15,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 st.set_page_config(
-    page_title="Shopper Spectrum | Retail Intelligence",
+    page_title="Shopsphere |Where trends revolve around you",
     page_icon="🛒",
     layout="wide",
     initial_sidebar_state="expanded",
